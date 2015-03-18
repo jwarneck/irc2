@@ -1,0 +1,37 @@
+<head>
+    <title>Register for IRC Chat</title>
+</head>
+<style>
+    body {
+    background-color: white;
+    font-family: "Verdana", Verdana, sans-serif;
+}
+h1 {
+    color: #333333;
+    margin-left: 40px;
+} 
+p {
+     color: black;
+     font-size: 16px;
+}
+h3 {
+     color: #006B24; 
+     font-size: 20px;
+}
+</style>
+<body>
+    <h1>Registration Page</h1>
+    <p>Register here for a chat account.</p>
+    <h3>{{newAccountCreated}}</h3>
+    <form method ="post" action="/register"><table>
+    <tr><td>Username:</td><td><input type="text" name="username" id = "username"></td></tr>
+    <tr><td>Password:</td><td><input type="password" name = "pw" id = "pw"></td></tr>
+    <tr></tr>
+    <tr><td><center><input type="submit" value="Submit" name="submit"></center></td></tr>
+    </table>
+    </form>
+    
+</body>
+<footer><br><br><br>
+    <center><a href="/">Return to Main Page</a></center>
+</footer>

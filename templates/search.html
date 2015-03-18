@@ -1,0 +1,39 @@
+<head>
+    <title>Search Results</title>
+</head>
+<style>
+    body {
+    background-color: white;
+    font-family: "Verdana", Verdana, sans-serif;
+}
+h1 {
+    color: #333333;
+    margin-left: 40px;
+} 
+p {
+     color: black;
+     font-size: 16px;
+}
+h3 {
+     color: #006B24; 
+     font-size: 20px;
+}
+</style>
+<body>
+    <h1>Search Results</h1>
+
+    {{notFound}}<br>
+
+    <center><table style="width:100%">
+        <tr><td><b>User</b></td><td><b>Message</b></td></tr>    
+        {% for entry in contentResults %}
+        <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td></tr>
+        {%endfor%}
+        {% for entry in userResults %}
+        <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td></tr>
+        {%endfor%}
+    </table></center>
+</body>
+<footer><br><br><br>
+    <center><a href="/">Return to Main Page</a></center>
+</footer>

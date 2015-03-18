@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" ng-app>
   <head>
-    <title>Chat Example</title>
+    <title>Talking is for Nerds</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/bootstrap.min.css">
     <link rel="stylesheet" href="/css/bootstrap-responsive.min.css">
@@ -107,9 +107,9 @@ if(showhide == "show"){
 <center><input type="text"  ng-model="name2" ng-change="setName2()" placeholder="Username" size="14" /></center>
 <center>Password:</center>
 <center><input  ng-model="password" type="password" size="14" /></center>
-<center><input type="submit" class="span1 btn btn-primary" value="Send" ng-disabled="!password"></center>
-
+<center><input type="submit" class="span2 btn btn-primary" value="Submit" ng-disabled="!password"></center>
 </form>
+
 <br />
 
 </div> 
@@ -125,12 +125,12 @@ if(showhide == "show"){
       <div class="navbar navbar-fixed-top navbar-inverse">
         <div class="navbar-inner">
           <div class="pull-right">
-            <a href="https://c9.io" class="brand">Cloud9 IDE</a>
+            <a href="/register" class="brand">Register</a></a><a href="/archive" class="brand">Archive</a></a>
           </div>
         </div>
       </div>
       <div class="page-header">
-        <h1>Chat Example</h1>
+        <h1>Talking is for Nerds</h1>
       </div>
       <div class="row">
         <div class="span3">
@@ -141,6 +141,7 @@ if(showhide == "show"){
           </ul>
           
         </div>
+
         <div class="span9">
           <table class="table table-striped table-bordered">
             <thead>
@@ -150,6 +151,21 @@ if(showhide == "show"){
               </tr>
             </thead>
             <tbody>
+              
+              <!--
+              
+              {% if login = True %}
+              
+              <tr>{%for msg in MSGS %}
+                <td class="span2" ng-bind="msg.name"></td>
+                <td class="span7" ng-bind="msg.text"></td>
+                {%endfor%}
+                </tr>
+                Not sure how to have a counter in that will count # of messgaes shown
+                
+              {%endif%}
+                -->
+              
               <tr ng-repeat="msg in messages">
                 <td class="span2" ng-bind="msg.name"></td>
                 <td class="span7" ng-bind="msg.text"></td>
@@ -172,5 +188,11 @@ if(showhide == "show"){
     <script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/angular.min.js"></script>
+    <center><form method = "POST" action = "/search"><table><tr><td><p>Search:    </p></td><td><input type="text" name="term" id = "term"></td><td></td>
+    <td><input type="submit" value="Submit" name="submit"></td></tr></table></form>
   </body>
+  <footer>
+    <center><h4>Notice: Messages entered while under the name 'Anonymous' will not be broadcast to other users.</h4></center>
+   
+  </footer>
 </html>
