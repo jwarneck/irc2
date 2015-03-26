@@ -45,7 +45,7 @@ io.on('connection', function (socket) {
       socket.get('name', function (err, name) {
         var data = {
           name: name,
-          text: text
+          text: text,
         };
 
         broadcast('message', data);

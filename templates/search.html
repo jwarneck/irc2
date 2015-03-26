@@ -25,12 +25,12 @@ h3 {
     {{notFound}}<br>
 
     <center><table style="width:100%">
-        <tr><td><b>User</b></td><td><b>Message</b></td></tr>    
+        <tr><td><b>User</b></td><td><b>Message</b></td><td><b>Channel</b></td></tr>    
         {% for entry in contentResults %}
-        <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td></tr>
+                    <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td><td>{{entry[3]}}</td></tr>
         {%endfor%}
         {% for entry in userResults %}
-        <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td></tr>
+        <tr><td>{{entry[2]}}</td><td>{{entry[1]}}</td><td>{{entry[3]}}</td></tr>
         {%endfor%}
     </table></center>
 </body>

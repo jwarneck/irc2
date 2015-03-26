@@ -3,3 +3,5 @@ Users are stored in a table named users.
 No users for the database set up yet. I will implement encryption for the passwords at some indeterminate point in the future.
 
 Most, if not all, of the test accounts have 'test' as the password.
+
+The user Campbell is subscribed to the 'General' room. So is the user Jordan.

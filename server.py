@@ -1,19 +1,24 @@
 import os
 import uuid
 from flask import Flask, session, render_template, request, redirect, url_for
-from flask.ext.socketio import SocketIO, emit
+from flask.ext.socketio import SocketIO, emit, join_room, leave_room
 import psycopg2
 import psycopg2.extras
 
 app = Flask(__name__, static_url_path='')
 app.config['SECRET_KEY'] = 'secret!'
+app.secret_key = os.urandom(24).encode('hex')
 
 gUsername = ""
 
 socketio = SocketIO(app)
 
-messages = [{'text': 'test', 'name': 'testing'}]
+messages = []
 users = {}
+rooms = ''
+
+
+tempUsername = ""
 
 firstConnect = False
 
@@ -23,7 +28,10 @@ def connectToDB():
     try:
         return psycopg2.connect(connectionString)
     except:
-        print("Can't connect do database")
+        print("Can't connect do database.")
+        
+def updateRooms():
+    socketio.emit('rooms', session['room'])
 
 
 
@@ -36,6 +44,9 @@ def updateRoster():
         else:
             names.append(users[user_id]['username'])
     print 'broadcasting names'
+    print session['room']
+    global rooms
+    rooms = session['room']
     emit('roster', names, broadcast=True)
     
 
@@ -43,28 +54,23 @@ def updateRoster():
 def test_connect():
     session['uuid']=uuid.uuid1()
     session['username']='Anonymous'
+    session['room']='General'
+    join_room(session['room'])
     print 'connected'
+    
+    global rooms
+    rooms = session['room']
     
     users[session['uuid']]={'username':'Anonymous'}
     updateRoster()
+    updateRooms()
 
-    query2 = "SELECT * FROM messages ORDER BY(msg_id) DESC LIMIT 5"
+    query2 = "SELECT * FROM messages WHERE room = 'General' ORDER BY(msg_id) DESC LIMIT 5"
     conn = connectToDB()
     displayMSG = conn.cursor()
     displayMSG.execute(query2)
     MSGS = []
     MSGS = displayMSG.fetchall()
-    
-#    print len(MSGS)
-#    x = 0
-#    while x < len(MSGS):
-#        this = MSGS[x][2]
-#        that = MSGS[x][1]
-#        messages = [{'text': that, 'name': this}]
-#        x += 1
-#        emit('message', messages)
-#        print "MESSAGES"
-#        print messages
         
     print MSGS
     
@@ -85,23 +91,101 @@ def test_connect():
 @socketio.on('message', namespace='/chat')
 def new_message(message):
     #tmp = {'text':message, 'name':'testName'}
-    tmp = {'text':message, 'name':users[session['uuid']]['username']}
-    con = connectToDB()
-    cur = con.cursor()
-    if session['username'] is not 'Anonymous':
-        messages.append(tmp)
-        emit('message', tmp, broadcast=True)
-        query = "insert into messages (content, poster) values ('"+message+"', '"+session['username']+"')"
-        print query
-        cur.execute(query)
-        con.commit()
-        
+    #checks to see if the message entred was a command
+    global rooms
+    rooms = session['room']
+    if message.startswith('/'):
+        if message.endswith('/'):
+            print "transferring rooms sequence"
+            newRoomName = message.lstrip('/')
+            newRoomName = newRoomName.rstrip('/')
+            #checks to see if the user is logged in
+            if session['username'] is not 'Anonymous':
+                print "user is logged in"
+                #checks to see if user is subscribed to the room they are trying to go to
+                subConn = connectToDB()
+                subCur = subConn.cursor()
+                userCur = subConn.cursor()
+                roomCur = subConn.cursor()
+                roomIDQuery = "select id from rooms where name ='"+newRoomName+"'"
+                print roomIDQuery
+                roomCur.execute(roomIDQuery)
+                roomID = roomCur.fetchone()
+                print type(roomID)
+                #checks if the room actually exists
+                if roomID is None:
+                    notARoom = {'text':'Error: Room does not exist.', 'name':'System'}
+                    emit('message', notARoom, broadcast = False)
+                else:
+                    #sets the session Room variable to the new room
+                    #could be done more efficiently subqueries, but who cares? It's easier for me to keep track of this and we wont be expecting any kind of heavy load on the DB
+                    userIDQuery = "select key_column from users where username = '"+session['username']+"'"
+                    userCur.execute(userIDQuery)
+                    userID = userCur.fetchone()
+                    userID = userID[0]
+                    print "userID ="+str(userID)+"."
+                    #again, this could be done with a join and subqueries. But for learning purposes this is fine and easy to keep track of.
+                    roomID = roomID[0]
+                    subQuery = "select * from subs where userid = '"+str(userID)+"' AND roomid = '"+str(roomID)+"'"
+                    subCur.execute(subQuery)
+                    isSubscribed = subCur.fetchall()
+                    print isSubscribed
+                    print len(isSubscribed)
+                    if len(isSubscribed) != 0:
+                        
+                        #user IS subbed to the chat channel
+                        print "Joining room."
+                        leave_room(session['room'])
+                        session['room'] = newRoomName
+                        join_room(session['room'])
+                        roomJoined = {'text':'You have been connected to the new room '+newRoomName+'. Have fun!', 'name':'System'}
+                        emit('message', roomJoined, broadcast = False)
+                        print session['room']
+                        print rooms
+                        print 'Those should be the same.'
+                        global tempUsername
+                        tempUsername = session['username']
+                    else:
+                        #user is not subbed to the chat channel
+                        notSubbed = {'text':'Sorry, you are not subscribed to that chat channel.', 'name':'System'}
+                        emit('message', notSubbed, broadcast = False)
+            else:
+                notLoggedIn = {'text':'Please log in to change chat channels.', 'name':'System'}
+                emit('message', notLoggedIn, broadcast = False)
+        else:
+            #this is lazy of me and isn't futureproofed or modular as it could be
+            #but if the thing starts with a / but does not end with one
+            #like a room change command would
+            #it sees it as an unknown command
+            #I can make this more modular if we need to use this kind of thing for other features as well later on
+            print "unknown command"
+            unknownCommand = {'text':'Sorry, that is an unknown command.', 'name':'System'}
+            emit('message', unknownCommand, broadcast = False)
     else:
-        print "Could not post message: Not logged in."
-        emit('message', tmp, broadcast=False)
-        #these messages show up to the posting user but are not broadcast to others
-        #we should eventually make changes in the UI to demonstrate this
-    #emit('message', tmp, broadcast=True)
+        tmp = {'text':message, 'name':users[session['uuid']]['username'], 'room':session['room']}
+        print tmp['room']
+        reject = {'text':'Sorry, could not send that messsage. Please log in.', 'name':'System'}
+        con = connectToDB()
+        cur = con.cursor()
+        if session['username'] is not 'Anonymous':
+            messages.append(tmp)
+            emit('message', tmp, broadcast=True, room = session['room'])
+            print rooms
+            global tempUsername
+            tempUsername = session['username']
+            print session['username']
+            query = "insert into messages (content, poster, room) values ('"+message+"', '"+session['username']+"', '"+session['room']+"')"
+            print query
+            cur.execute(query)
+            con.commit()
+        
+        else:
+            print "Could not post message: Not logged in."
+            #emit('message', tmp, broadcast=False)
+            emit('message', reject, broadcast = False)
+            #these messages show up to the posting user but are not broadcast to others
+            #we should eventually make changes in the UI to demonstrate this
+        #emit('message', tmp, broadcast=True)
     
 @socketio.on('identify', namespace='/chat')
 def on_identify(message):
@@ -114,6 +198,8 @@ def on_identify(message):
 
 @socketio.on('login', namespace='/chat')
 def on_login(pw):
+    reject = {'text':'Sorry, you could not be logged in. Please try again.', 'name':'System'}
+    accept = {'text':'You have been logged in. Welcome.', 'name':'System'}
     print 'login '  + pw
     query = "SELECT * FROM users WHERE username = '"+gUsername+"' AND password = crypt('"+pw+"', password)"
     print query
@@ -121,10 +207,12 @@ def on_login(pw):
     logCur = conn.cursor()
     logCur.execute(query)
     results = logCur.fetchone()
-    x = 0
     if results is not None:
         print "Logging in."
         session['username'] = gUsername
+        emit('message', accept, broadcast = False)
+        global tempUsername
+        tempUsername = gUsername
         
 
 
@@ -132,6 +220,9 @@ def on_login(pw):
         print "Unable to log in. Check username and password."
         #this should also be reflected in the GUI
         session['username'] = 'Anonymous'
+        emit('message', reject, broadcast = False)
+        global tempUsername
+        tempUsername = 'Anonymous'
     #users[session['uuid']]={'username':message}
     #updateRoster()
     
@@ -152,9 +243,14 @@ def hello_world():
     
 @app.route('/search', methods = ['GET', 'POST'])
 def search():
+    
     conn = connectToDB()
     cur1 = conn.cursor()
     cur2 = conn.cursor()
+    curUserName = conn.cursor()
+    curSub = conn.cursor()
+    
+    searchingUser = tempUsername
     
     if request.method == 'POST':
         print "Search function entered."
@@ -166,6 +262,22 @@ def search():
         print uQuery
         print mQuery
         
+        if tempUsername is not 'Anonymous':
+            usernameQuery = "select key_column from users where username = '"+tempUsername+"'"
+            print usernameQuery
+            curUserName.execute(usernameQuery)
+            userID = curUserName.fetchone()
+            userID = userID[0]
+            print userID
+            sQuery = "select distinct rooms.name from subs inner join rooms on rooms.id = subs.roomid where subs.userid = '"+str(userID)+"'"
+            print sQuery
+            curSub.execute(sQuery)
+            subs = curSub.fetchall()
+            
+            print subs
+            for sub in subs:
+                print sub
+            print type(subs)
         cur1.execute(uQuery)
         try:
             userResults = cur1.fetchall()
@@ -176,15 +288,31 @@ def search():
             contentResults = cur2.fetchall()
         except:
             contentResults = []
-        print userResults
-        print contentResults
+        newContentResults = []
+        newUserResults = []
+        for result in contentResults:
+            print result[3]
+            for sub in subs:
+                for thing in sub:
+                    print thing
+                    if thing == result[3]:
+                        print result
+                        newContentResults.append(result)
+                        print "Result omitted."
+        for result in userResults:
+            for sub in subs:
+                if sub[0] == result[3]:
+                    newUserResults.append(result)
+                    print "Result omitted."
+        print newUserResults
+        print newContentResults
         print "Search done."
         
         notFound = ""
-        if contentResults is not None:
-            if userResults is not None:
+        if contentResults is None:
+            if userResults is None:
                 notFound = "Sorry, no results could be found."
-    return render_template('search.html', contentResults = contentResults, userResults = userResults, notFound = notFound)
+    return render_template('search.html', contentResults = newContentResults, userResults = newUserResults, notFound = notFound, subs = subs)
     
 @app.route('/register', methods = ['GET', 'POST'])
 def register():
@@ -194,6 +322,8 @@ def register():
     conn = connectToDB()
     curR = conn.cursor()
     curS = conn.cursor()
+    curK = conn.cursor()
+    curD = conn.cursor()
 
     if request.method == 'POST':
      
@@ -216,6 +346,27 @@ def register():
             conn.commit()
             print "Query committed."
             newAccountCreated = "Account Created";
+            query = "SELECT key_column from users where username = '"+username+"'"
+            print query
+            curK.execute(query)
+            print "Execute ID fetch query."
+            ID = curK.fetchone()
+            print "fetched ID"
+            if ID is not None:
+                print ID
+            else:
+                print "Didn't fetch."
+            print "stripping"
+            ID = ID[0]
+            print ID
+            newUserID = ID
+            newUserID = str(newUserID)
+            print "Making new query."
+            newQuery = "INSERT into subs (userid, roomid) VALUES ("+newUserID+", 1)"
+            print newQuery
+            curD.execute(newQuery)
+            conn.commit()
+            print "Subscription to General established."
         #if result is not None:
         #    newAccountCreated = "Sorry, an account with that name already exists."
     

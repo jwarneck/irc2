@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" ng-app>
   <head>
-    <title>Talking is for Nerds</title>
+    <title>Chat Time</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/bootstrap.min.css">
     <link rel="stylesheet" href="/css/bootstrap-responsive.min.css">
@@ -130,7 +130,7 @@ if(showhide == "show"){
         </div>
       </div>
       <div class="page-header">
-        <h1>Talking is for Nerds</h1>
+        <h1>Chat Room</h1>
       </div>
       <div class="row">
         <div class="span3">
@@ -139,7 +139,12 @@ if(showhide == "show"){
             <li ng-repeat="user in roster" ng-bind="user">
             </li>
           </ul>
-          
+          <h3>Rooms</h3>
+          <ul>
+          <li>General</li>
+          <li>CPSC 350</li>
+          </ul>
+          <p>To change rooms type /RoomName/ into the chat window.</p>
         </div>
 
         <div class="span9">
@@ -152,23 +157,13 @@ if(showhide == "show"){
             </thead>
             <tbody>
               
-              <!--
-              
-              {% if login = True %}
-              
-              <tr>{%for msg in MSGS %}
-                <td class="span2" ng-bind="msg.name"></td>
-                <td class="span7" ng-bind="msg.text"></td>
-                {%endfor%}
-                </tr>
-                Not sure how to have a counter in that will count # of messgaes shown
-                
-              {%endif%}
-                -->
-              
               <tr ng-repeat="msg in messages">
                 <td class="span2" ng-bind="msg.name"></td>
-                <td class="span7" ng-bind="msg.text"></td>
+              <!--  <td class="span7" ng-bind="msg.text"></td> -->
+              <div ng-if="msg.room == rooms">
+                <td class="span7">{{msg.text}}</td>
+                <td class="span2">{{msg.room}}</td>
+                </div>
               </tr>
             </tbody>
           </table>
@@ -192,7 +187,7 @@ if(showhide == "show"){
     <td><input type="submit" value="Submit" name="submit"></td></tr></table></form>
   </body>
   <footer>
-    <center><h4>Notice: Messages entered while under the name 'Anonymous' will not be broadcast to other users.</h4></center>
+
    
   </footer>
 </html>
