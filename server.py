@@ -34,6 +34,13 @@ def updateRooms():
     socketio.emit('rooms', session['room'])
 
 
+def is_empty(any_structure):
+    if any_structure:
+        print('Structure is not empty.')
+        return False
+    else:
+        print('Structure is empty.')
+        return True
 
 def updateRoster():
     names = []
@@ -241,6 +248,38 @@ def hello_world():
     return app.send_static_file('index.html')
     return 'Hello World!'
     
+@app.route('/newroom')
+def newroom():
+        
+    return render_template('newroom.html')
+    
+@app.route('/newroommade', methods = ['GET', 'POST'])
+def newroommade():
+    conn = connectToDB()
+    hueue = ""
+    if request.method == 'POST':
+        print "Name entered."
+        roomName = request.form['roomname']
+        print roomName
+        alreadyExistsQuery = "select id from rooms where name = '"+roomName+"'"
+        print alreadyExistsQuery
+        alreadyCur = conn.cursor()
+        alreadyCur.execute(alreadyExistsQuery)
+        print "Query Executed."
+        resultID = alreadyCur.fetchone()
+        print resultID
+        if is_empty(resultID):
+            insertQuery = "insert into rooms (name) values ('"+roomName+"')"
+            print insertQuery
+            newCur = conn.cursor()
+            newCur.execute(insertQuery)
+            conn.commit()
+            print "Room created."
+            hueue = "Room created."
+        else:
+            hueue = "A room with that name already exists."
+    return render_template('newroommade.html', hueue = hueue)
+    
 @app.route('/search', methods = ['GET', 'POST'])
 def search():
     
@@ -313,6 +352,45 @@ def search():
             if userResults is None:
                 notFound = "Sorry, no results could be found."
     return render_template('search.html', contentResults = newContentResults, userResults = newUserResults, notFound = notFound, subs = subs)
+    
+@app.route('/subscribe')
+def subscribe():
+    
+    return render_template('subscribe.html')
+    
+@app.route('/subbed', methods = ['GET', 'POST'])
+def subbed():
+    if request.method == 'POST':
+        conn = connectToDB()
+        userQuery = "select key_column from users where username = '"+request.form['username']+"'"
+        roomQuery = "select id from rooms where name = '"+request.form['roomname']+"'"
+        print userQuery
+        print roomQuery
+        userCur = conn.cursor()
+        roomCur = conn.cursor()
+        userCur.execute(userQuery)
+        roomCur.execute(roomQuery)
+        print "queries executed."
+        user = userCur.fetchone()
+        room = roomCur.fetchone()
+        print user
+        print room
+        if is_empty(user):
+            qwert = "Couldn't find that username or room name."
+        elif is_empty(room):
+            qwert = "Couldn't find that username or room name."
+        else:
+            user = int(user[0])
+            room = int(room[0])
+            print user
+            print room
+            insertQ = "insert into subs (userid, roomid) values ("+str(user)+", "+str(room)+")"
+            print insertQ
+            insertCur = conn.cursor()
+            insertCur.execute(insertQ)
+            conn.commit()
+            qwert = "Subscription made."
+    return render_template('subbed.html', qwert = qwert)
     
 @app.route('/register', methods = ['GET', 'POST'])
 def register():
